@@ -1,55 +1,55 @@
-import os
-import pandas as pd
+import numpy as np
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 INPUT_FILE = "flowlogs.txt"
-#read only needed columns
-COLS_USED = [6, 7]
-CHUNK_SIZE = 5
-DATA_FILE = "network_data.csv"
+PROTOCOL_MAP_FILE = "protocol-numbers.csv"
+LOOKUP_FILE = "lookup.txt"
 
 
-def read_large_file(file_path, chunk_size):
-    for chunk in pd.read_table(file_path, sep=' ', header=None, usecols=COLS_USED  ,chunksize=chunk_size):
-        yield chunk
+protocol_info = np.loadtxt(PROTOCOL_MAP_FILE, usecols=[0, 1], delimiter=',', dtype='str', skiprows=1, encoding="utf-8")
 
-#read data in chunks to make optimal use of memory
-for data_chunk in read_large_file(INPUT_FILE, CHUNK_SIZE):
-    data_chunk.to_csv("network_data.csv", sep=',', mode="a", header=False, index=False)
+id_protocol_mp = {}
+for d in protocol_info:
+    id_protocol_mp[d[0]] = d[1]
 
-df1 = pd.read_csv("network_data.csv")
-# name cols appropriately
-df1.columns = ['dstport', 'protocol']
+flowlog_data = np.loadtxt(INPUT_FILE, usecols=[6, 7], delimiter=' ', dtype='str', encoding="utf-8")
 
-# read lookup data
-lookup_df = pd.read_table("lookup.txt", delimiter=",")
-lookup_df['protocol'] = lookup_df['protocol'].str.upper()
-lookup_df = lookup_df.rename(columns=lambda x: x.strip())
+#map protocol keyword instead of referring a number
+arr = []
+for d in flowlog_data:
+    arr.append(id_protocol_mp.get(d[1]))
+# data now has TCP, UDP etc mapped  
+result = np.insert(flowlog_data, flowlog_data.shape[1], arr, axis=1)
 
 
-# mapping data for protocol number and name is taken from here - https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
-protocol_map_df = pd.read_csv("protocol-numbers.csv")
-protocol_map_df = protocol_map_df[['Decimal', 'Keyword']]
+lookup_data = np.loadtxt(LOOKUP_FILE, delimiter=',', dtype='str', skiprows=1, converters={1: lambda x: x.upper(), 2: lambda x: x.strip()}, encoding="utf-8")
 
-# map protocol number in input file to protocol name/keyword
-formatted_input_df = pd.merge(df1, protocol_map_df, left_on='protocol', right_on='Decimal')
-#remove unused cols
-del formatted_input_df["protocol"]
-del formatted_input_df["Decimal"]
-#rename col
-formatted_input_df.rename(columns={'Keyword': 'protocol'}, inplace=True)
+portprotocol_tag_map = {}
+for d in lookup_data:
+    portprotocol_tag_map[d[0]+"-"+d[1]] = d[2]
 
-# merge data from flow logs and lookup
-output_df = pd.merge(formatted_input_df, lookup_df, on=['protocol', 'dstport'], how="left")
-output_df.fillna({"tag": "Untagged"}, inplace=True)
+# create a column for tag based on port and protocol
+arr1 = []
+for r in result:
+    arr1.append(portprotocol_tag_map.get(r[0]+"-"+r[2], "Untag"))
 
-# verify count based on tags
-grouped_df = output_df.groupby('tag')['tag'].count()
-print(grouped_df)
+# merge tag column with flow data
+result = np.insert(result, result.shape[1], arr1, axis=1)
+# delete unused column protocol number
+result = np.delete(result, 1, axis=1)
 
-# verify count based on port and protocol
-grouped_df = output_df.groupby(['dstport', 'protocol']).count()
-print(grouped_df)
+# Count of matches for each tag
+unique_values, counts = np.unique(result[:, 2], return_counts=True)
+# append it to original data
+count_tags = np.column_stack((unique_values, counts))
+print("Count of matches for each tag : ")
+print(count_tags)
 
-#clean up
-if os.path.exists(DATA_FILE):
-  os.remove(DATA_FILE)
+# Count of matches for each port/protocol combination 
+result1 = np.delete(result, 2, axis=1)
+unique_rows, counts = np.unique(result1, axis=0, return_counts=True)
+
+count_tags = np.column_stack((unique_rows, counts))
+print("Count of matches for each port/protocol combination : ")
+print(count_tags)
