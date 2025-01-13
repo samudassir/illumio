@@ -1,4 +1,4 @@
-# Setup python environment setup
+# Setup python environment
 python3 -m virtualenv venv
 
 # Activate virtualenv
