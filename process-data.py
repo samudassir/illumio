@@ -27,12 +27,12 @@ lookup_data = np.loadtxt(LOOKUP_FILE, delimiter=',', dtype='str', skiprows=1, co
 
 portprotocol_tag_map = {}
 for d in lookup_data:
-    portprotocol_tag_map[d[0]+"-"+d[1]] = d[2]
+    portprotocol_tag_map[tuple(d[0:2])] = d[2]
 
 # create a column for tag based on port and protocol
 arr1 = []
 for r in result:
-    arr1.append(portprotocol_tag_map.get(r[0]+"-"+r[2], "Untag"))
+    arr1.append(portprotocol_tag_map.get(tuple((r[0],r[2])), "Untag"))
 
 # merge tag column with flow data
 result = np.insert(result, result.shape[1], arr1, axis=1)
