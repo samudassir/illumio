@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List
+from typing import List, Dict
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -8,7 +8,7 @@ LOOKUP_FILE = "lookup.txt"
 PROTOCOL_MAP_FILE = "protocol-numbers.csv"
 
 #downloaded protocol info from https://docs.aws.amazon.com/vpc/latest/userguide/flow-log-records.html   
-def read_protocol_info():
+def read_protocol_info() -> Dict:
     """read protocol information""" 
     protocol_info = np.loadtxt(PROTOCOL_MAP_FILE, usecols=[0, 1], delimiter=',', dtype='str', skiprows=1, encoding="utf-8")
     # use a map for protocol info for fast retrieval
@@ -17,7 +17,7 @@ def read_protocol_info():
         id_protocol_mp[protocol_id] = protocol
     return id_protocol_mp
 
-def read_lookup_data():
+def read_lookup_data() -> Dict:
     """read lookup data"""
     lookup_data = np.loadtxt(LOOKUP_FILE, delimiter=',', dtype='str', skiprows=1, converters={1: lambda x: x.upper(), 2: lambda x: x.strip()}, encoding="utf-8")
     #build a map to easily retrieve tag name based on "port and protocol" as key
@@ -28,7 +28,7 @@ def read_lookup_data():
     return portprotocol_tag_map
 
 def read_flowlog_data() -> List[List]:
-    """Function to process flow log data"""
+    """Function to process flow log data and return 2D array appending tags column"""
     id_protocol_mp = read_protocol_info()
     portprotocol_tag_map = read_lookup_data()
 
