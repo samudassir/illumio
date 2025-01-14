@@ -3,9 +3,9 @@ from typing import List, Dict
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
-INPUT_FILE = "flowlogs.txt"
-LOOKUP_FILE = "lookup.txt"
-PROTOCOL_MAP_FILE = "protocol-numbers.csv"
+INPUT_FILE = "data/flowlogs.txt"
+LOOKUP_FILE = "data/lookup.txt"
+PROTOCOL_MAP_FILE = "data/protocol-numbers.csv"
 
 #downloaded protocol info from https://docs.aws.amazon.com/vpc/latest/userguide/flow-log-records.html   
 def read_protocol_info() -> Dict:
